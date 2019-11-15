@@ -52,9 +52,41 @@ public class DataBaseHandler extends Conf {
 
     }
 
+    public ObservableList<Human> selectHuman(String paramFind, String paramColumn, String paramCat) throws ClassNotFoundException, SQLException {
+        String setTr = "email";
+        if (paramFind == "Имя") {
+            setTr = Const.NameCol;
+        } else if (paramFind == "Фамилия") {
+            setTr = Const.SurnameCol;
+        } else if (paramFind == "Город") {
+            setTr = Const.AddressCol;
+        }
+        String select;
+        try {
+            if (paramCat != "Все") {
+                select = "SELECT " + Const.IdHuman + "," + Const.NameCol + "," + Const.SurnameCol + ","
+                        + Const.AddressCol + "," + Const.EmailCol + "," + Const.CategoryCol + " FROM " + Const.HumanTable
+                        + " WHERE " + setTr + " = '" + paramColumn + "' AND " + Const.CategoryCol + " = '" + paramCat + "'";
+            } else {
+                select = "SELECT " + Const.IdHuman + "," + Const.NameCol + "," + Const.SurnameCol + ","
+                    + Const.AddressCol + "," + Const.EmailCol + "," + Const.CategoryCol + " FROM " + Const.HumanTable
+                    + " WHERE " + setTr + " = '" + paramColumn + "'";
+            }
+            PreparedStatement prSt = getDbConnection().prepareStatement(select);
+            ResultSet resultSet = prSt.executeQuery();
+            while (resultSet.next()) {
+                data.add(new Human(resultSet.getInt(Const.IdHuman), resultSet.getString(Const.NameCol), resultSet.getString(Const.SurnameCol), resultSet.getString(Const.AddressCol),
+                        resultSet.getString(Const.EmailCol), resultSet.getString(Const.CategoryCol)));
+            }
+        } catch (SQLException | ClassNotFoundException ex) {
+            Logger.getLogger(DataBaseHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return data;
+    }
+
     public ObservableList<Human> selectHuman(String num) throws ClassNotFoundException, SQLException {
         try {
-            String select = "SELECT " + Const.NameCol + "," + Const.SurnameCol + ","
+            String select = "SELECT " + Const.IdHuman + "," + Const.NameCol + "," + Const.SurnameCol + ","
                     + Const.AddressCol + "," + Const.EmailCol + "," + Const.CategoryCol + " FROM " + Const.HumanTable
                     + " NATURAL JOIN " + Const.PhoneTable + " WHERE " + Const.Number + " = " + num;
             PreparedStatement prSt = getDbConnection().prepareStatement(select);
