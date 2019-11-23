@@ -64,7 +64,7 @@ class View extends Group {
 
     private GridPane grid;
     private Text nameEdit;
-
+    private HBox editHbox;
     private BorderPane border;
     private Image phonebook;
     private ImageView pic;
@@ -80,7 +80,19 @@ class View extends Group {
         table.setEditable(true);
         //коллекция которая получается при извлечении информации из базы данных
         dataPh = dbHandler.selectPhone(id);
-        System.out.println(dataPh);
+        idCol.setMinWidth(100);
+        idCol.setCellValueFactory(
+                new PropertyValueFactory<Phone, Integer>("id"));
+        idCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
+        idCol.setOnEditCommit(
+                new EventHandler<TableColumn.CellEditEvent<Phone, Integer>>() {
+                    @Override
+                    public void handle(TableColumn.CellEditEvent<Phone, Integer> t) {
+                        ((Phone) t.getTableView().getItems().get(
+                                t.getTablePosition().getRow())).setId(t.getNewValue());
+                    }
+                }
+        );
 
         typeCol.setMinWidth(100);
         typeCol.setCellValueFactory(
@@ -111,13 +123,56 @@ class View extends Group {
         );
 
         table.setItems(dataPh);
-        table.getColumns().addAll(typeCol, numberCol);
+        table.getColumns().addAll(idCol, typeCol, numberCol);
+
+        TextField addPhone = new TextField();
+        addPhone.setMaxWidth(120);
+        addPhone.setPromptText("PhoneNumber");
+
+        ComboBox addType = new ComboBox();
+        addType.getItems().addAll(
+                "Рабочий",
+                "Домашний",
+                "Мобильный"
+        );
+        addType.setValue("Мобильный");
+
+        HBox editPhone = new HBox();
+        final Button addButton = new Button("Добавить");
+        addButton.setOnAction((ActionEvent e) -> {
+            try {
+                if (addPhone.getText().matches("^[1-9]{1}[0-9]*") && !dbHandler.include(addPhone.getText())) {
+                    dbHandler.insertPhone(id, addPhone.getText(), addType.getValue().toString());
+                    //Добавление телефона в список и обновление информации для отображения в таблицу
+                    dataPh = dbHandler.selectPhone(id);
+
+                } else if (addPhone.getText().matches("^[1-9]{1}[0-9]*") == false) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Некорректно введённый номер");
+                    alert.setContentText("В номере должны быть только цифры");
+                    alert.showAndWait();
+                } else if (dbHandler.include(addPhone.getText())) {
+                    dataPh = dbHandler.selectPhone(id);
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Номер занят");
+                    alert.setContentText("Контакт с таким номером существует");
+                    alert.showAndWait();
+                }
+                addPhone.clear();
+            } catch (ClassNotFoundException | SQLException ex) {
+                Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        });
+        editPhone.getChildren().addAll(addType, addPhone, addButton);
+        editPhone.setSpacing(3);
 
         Scene scene = new Scene(new Group());
         Stage stage = new Stage();
         stage.setTitle("Table View Sample");
-        stage.setWidth(286);
-        stage.setHeight(500);
+        stage.setWidth(344);
+        stage.setHeight(520);
 
         Label label = new Label("");
         label.setFont(new Font("Arial", 20));
@@ -125,7 +180,7 @@ class View extends Group {
         VBox vbox = new VBox();
         vbox.setSpacing(5);
         vbox.setPadding(new Insets(5, 0, 0, 10));
-        vbox.getChildren().addAll(label, table);
+        vbox.getChildren().addAll(label, table, editPhone);
 
         ((Group) scene.getRoot()).getChildren().addAll(vbox);
 
@@ -146,11 +201,6 @@ class View extends Group {
         //коллекция которая получается при извлечении информации из базы данных
         data = dbHandler.selectHuman();
         table.setEditable(true);
-        TableColumn<Human, Number> indexColumn = new TableColumn<Human, Number>("#");
-        indexColumn.setMinWidth(50);
-        indexColumn.setSortable(false);
-        indexColumn.setCellValueFactory(column -> new ReadOnlyObjectWrapper<Number>(table.getItems().indexOf(column.getValue()) + 1));
-
         idCol.setMinWidth(100);
         idCol.setCellValueFactory(
                 new PropertyValueFactory<Human, Integer>("id"));
@@ -253,7 +303,64 @@ class View extends Group {
         actionCol.setCellValueFactory(new PropertyValueFactory<>(""));
         actionCol.setMinWidth(175);
 
-        Callback<TableColumn<Human, String>, TableCell<Human, String>> cellFactory
+        editHbox = new HBox();
+        TextField addName = new TextField();
+        addName.setPromptText("Name");
+        addName.setMaxWidth(nameCol.getPrefWidth());
+        TextField addSurname = new TextField();
+        surnameCol.setMaxWidth(surnameCol.getPrefWidth());
+        addSurname.setPromptText("Surname");
+        TextField addAddress = new TextField();
+        addAddress.setMaxWidth(addressCol.getPrefWidth());
+        addAddress.setPromptText("Address");
+        TextField addEmail = new TextField();
+        addEmail.setMaxWidth(emailCol.getPrefWidth());
+        addEmail.setPromptText("Email");
+
+        ComboBox addCategory = new ComboBox();
+        addCategory.getItems().addAll(
+                "Друзья",
+                "Деловой партнёр",
+                "Родственники"
+        );
+        addCategory.setValue("Друзья");
+
+        final Button addButton = new Button("Добавить");
+        addButton.setOnAction((ActionEvent e) -> {
+            data.clear();
+            try {
+                if (isInputValid(addName.getText(), addSurname.getText(), addAddress.getText(), addEmail.getText()) && !dbHandler.includeHuman(addEmail.getText())) {
+                    dbHandler.insertHuman(addName.getText(), addSurname.getText(), addAddress.getText(), addEmail.getText(), addCategory.getValue().toString());
+                    data = dbHandler.selectHuman();
+
+                } else if (!isInputValid(addName.getText(), addSurname.getText(), addAddress.getText(), addEmail.getText())) {
+                    data = dbHandler.selectHuman();
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибочка");
+                    alert.setHeaderText("Ошибка ввода");
+                    alert.setContentText("\"В одном из введенных вами полей обнаружены недопустимые символы(Имя и фамилия состоят из русских букв и "
+                            + "начинаются только с заглавной, а почта вводится в формате __@__.__)\"");
+                    alert.showAndWait();
+                } else if (dbHandler.includeHuman(addEmail.getText())) {
+                    data = dbHandler.selectHuman();
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибочка");
+                    alert.setHeaderText("Почта занята");
+                    alert.setContentText("\"Введенная вами почта уже занята\"");
+                    alert.showAndWait();
+                }
+            } catch (ClassNotFoundException | SQLException ex) {
+                Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            addName.clear();
+            addSurname.clear();
+            addAddress.clear();
+            addEmail.clear();
+        });
+        editHbox.getChildren().addAll(addName, addSurname, addAddress, addEmail, addCategory, addButton);
+        editHbox.setSpacing(3);
+
+        Callback<TableColumn<Human, String>, TableCell<Human, String>> showNum
                 = //
                 new Callback<TableColumn<Human, String>, TableCell<Human, String>>() {
                     @Override
@@ -271,11 +378,8 @@ class View extends Group {
                                 } else {
                                     btn.setOnAction(event -> {
                                         try {
-                                            //shock
                                             createTablePhone(table.getItems().get(this.getIndex()).getId());
-                                        } catch (ClassNotFoundException ex) {
-                                            Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
-                                        } catch (SQLException ex) {
+                                        } catch (ClassNotFoundException | SQLException ex) {
                                             Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
                                         }
                                     });
@@ -288,7 +392,8 @@ class View extends Group {
                     }
                 };
 
-        actionCol.setCellFactory(cellFactory);
+        actionCol.setCellFactory(showNum);
+        actionCol.setMinWidth(132.5);
 
 /////////////////////////////
         table.setItems(data);
@@ -296,24 +401,40 @@ class View extends Group {
 
         Scene scene = new Scene(new Group());
         Stage stage = new Stage();
-        stage.setTitle("Table View Sample");
-        stage.setWidth(820);
+        stage.setTitle("Результат");
+        stage.setWidth(771);
         stage.setHeight(550);
 
-        Label label = new Label("Organizations List");
+        Label label = new Label("Список контактов");
         label.setFont(new Font("Arial", 20));
 
         VBox vbox = new VBox();
         vbox.setSpacing(5);
         vbox.setPadding(new Insets(10, 0, 0, 10));
-        vbox.getChildren().addAll(label, table);
+        vbox.getChildren().addAll(label, table, editHbox);
 
         ((Group) scene.getRoot()).getChildren().addAll(vbox);
 
         stage.setScene(scene);
         stage.show();
     }
+////azxczxcxcasascas/////
 
+    public boolean isInputValid(String name, String surname, String address, String email) {
+        boolean val = true;
+        if ("".equals(name.trim()) || "".equals(surname.trim()) || "".equals(address.trim())
+                || "".equals(email.trim()) || !surname.matches("^[А-Я]{1}[а-яё]{1,23}[-]?[А-ЯЁ]?[а-яё]{0,23}")
+                || !name.matches("^[А-Я]{1}[а-яё]{1,23}[-]?[А-ЯЁ]?[а-яё]{0,23}") || !email.matches("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?"
+                        + "^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\"
+                        + "[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])"
+                        + "?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:"
+                        + "(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])")) {
+            val = false;
+        }
+        return val;
+    }
+
+////adsasaxacaacascaa/////
     private void createTableHuman(String number) throws ClassNotFoundException, SQLException {
         data.clear();
         TableColumn idCol = new TableColumn("id");
@@ -326,10 +447,6 @@ class View extends Group {
         //коллекция которая получается при извлечении информации из базы данных
         data = dbHandler.selectHuman(number);
         table.setEditable(true);
-        TableColumn<Human, Number> indexColumn = new TableColumn<Human, Number>("#");
-        indexColumn.setMinWidth(50);
-        indexColumn.setSortable(false);
-        indexColumn.setCellValueFactory(column -> new ReadOnlyObjectWrapper<Number>(table.getItems().indexOf(column.getValue()) + 1));
         table.setMaxWidth(780);
         table.setMaxHeight(150);
         idCol.setMinWidth(100);
@@ -418,8 +535,7 @@ class View extends Group {
 
         TableColumn actionCol = new TableColumn("Action");
         actionCol.setCellValueFactory(new PropertyValueFactory<>(""));
-        actionCol.setMinWidth(175);
-
+        actionCol.setMinWidth(117.5);
         Callback<TableColumn<Human, String>, TableCell<Human, String>> cellFactory
                 = //
                 new Callback<TableColumn<Human, String>, TableCell<Human, String>>() {
@@ -461,8 +577,8 @@ class View extends Group {
         Scene scene = new Scene(new Group());
         Stage stage = new Stage();
         stage.setTitle("Контакт");
-        stage.setWidth(820);
-        stage.setHeight(260);
+        stage.setWidth(755);
+        stage.setHeight(245);
 
         Label label = new Label("Найденный контакт");
         label.setFont(new Font("Arial", 20));
@@ -583,7 +699,7 @@ class View extends Group {
 
         TableColumn actionCol = new TableColumn("Action");
         actionCol.setCellValueFactory(new PropertyValueFactory<>(""));
-        actionCol.setMinWidth(175);
+        actionCol.setMinWidth(117.5);
 
         Callback<TableColumn<Human, String>, TableCell<Human, String>> cellFactory
                 = //
@@ -603,7 +719,6 @@ class View extends Group {
                                 } else {
                                     btn.setOnAction(event -> {
                                         try {
-                                            //shock
                                             createTablePhone(table.getItems().get(this.getIndex()).getId());
                                         } catch (ClassNotFoundException ex) {
                                             Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
@@ -626,8 +741,8 @@ class View extends Group {
         Scene scene = new Scene(new Group());
         Stage stage = new Stage();
         stage.setTitle("Результат");
-        stage.setWidth(820);
-        stage.setHeight(520);
+        stage.setWidth(755.75);
+        stage.setHeight(489);
 
         Label label = new Label("Результат поиска");
         label.setFont(new Font("Arial", 20));
@@ -706,11 +821,11 @@ class View extends Group {
 
     }
 
-    private void createWindowFindParams() {
+    private void createSearchBoxByParam() {
         TextField strFind;
         Stage stage = new Stage();
         stage.setTitle("Поиск контакта по параметру");
-        Scene scene = new Scene(new GridPane(), 720, 85);
+        Scene scene = new Scene(new GridPane(), 540, 70);
         HBox box = new HBox();
         HBox box1 = new HBox();
         GridPane gr = (GridPane) scene.getRoot();
@@ -741,20 +856,19 @@ class View extends Group {
                 "Все"
         );
         param.setValue("Имя");
+        paramCat.setValue("Все");
         Button btnOk = new Button("Найти");
         btnOk.setOnAction((ActionEvent e) -> {
-            if (strFind.getText() != null) {
+            if (!"".equals(strFind.getText().trim())) {
                 try {
-                    createTableHuman(param.getValue().toString(),strFind.getText(),paramCat.getValue().toString());
-                } catch (ClassNotFoundException ex) {
-                    Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (SQLException ex) {
+                    createTableHuman(param.getValue().toString(), strFind.getText(), paramCat.getValue().toString());
+                } catch (ClassNotFoundException | SQLException ex) {
                     Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 stage.close();
             } else {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Data entry error");
+                alert.setTitle("Ошибка");
                 alert.setHeaderText("Введена пустая строка");
                 alert.setContentText("Строка не должна быть пустой");
                 alert.showAndWait();
@@ -771,44 +885,50 @@ class View extends Group {
         stage.show();
     }
 
-    private void createWindowFind() {
-        TextField nameEdit;
+    private void createSearchBoxByPhone() {
+        TextField phoneEdit;
         Stage stage = new Stage();
         stage.setTitle("Поиск контакта по номеру");
-        Scene scene = new Scene(new HBox(20), 470, 65);
+        Scene scene = new Scene(new HBox(20), 410, 34.5);
         HBox box = (HBox) scene.getRoot();
         box.setPadding(new Insets(5, 5, 5, 5));
         final Text text = new Text("Введите номер!");
         text.setFont(Font.font("Verdana", 20));
 
-        nameEdit = new TextField();
-        nameEdit.setText("79610248569");
+        phoneEdit = new TextField();
+        phoneEdit.setText("79610248569");
 
         Button btnOk = new Button("Поиск");
         btnOk.setOnAction((ActionEvent e) -> {
-            if (nameEdit.getText().matches("[0-9]+") == true) {
+            if (phoneEdit.getText().matches("^[1-9]{1}[0-9]*") == true && dbHandler.include(phoneEdit.getText())) {
                 try {
-                    createTableHuman(nameEdit.getText());
-                } catch (ClassNotFoundException ex) {
-                    Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (SQLException ex) {
+                    createTableHuman(phoneEdit.getText());
+                } catch (ClassNotFoundException | SQLException ex) {
                     Logger.getLogger(View.class.getName()).log(Level.SEVERE, null, ex);
                 }
                 stage.close();
-            } else {
+            } else if (phoneEdit.getText().matches("^[1-9]{1}[0-9]*") == false) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Data entry error");
+                alert.setTitle("Ошибка");
                 alert.setHeaderText("Некорректно введённый номер");
                 alert.setContentText("В номере должны быть только цифры");
+                alert.showAndWait();
+            } else if (!dbHandler.include(phoneEdit.getText())) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Ошибка");
+                alert.setHeaderText("Номера нет");
+                alert.setContentText("Контакта с введенным номером не существует");
                 alert.showAndWait();
             }
         });
         btnOk.setDefaultButton(true);//enter work 
-        box.getChildren().addAll(text, nameEdit, btnOk);
+        btnOk.setMinWidth(70);
+        box.getChildren().addAll(text, phoneEdit, btnOk);
         stage.setScene(scene);
         stage.show();
     }
 
+    /////////////////////////////////////////////////
     private void setElements(Stage primaryStage) {
         border = new BorderPane();
         MenuBar menuBar = new MenuBar();
@@ -824,15 +944,15 @@ class View extends Group {
     }
 
     private Menu createFileMenu() {
-        Menu menuFile = new Menu("#");
+        Menu menuFile = new Menu("Поиск");
         MenuItem playPeople = new MenuItem("Поиск по номеру телефона");
         playPeople.setOnAction((ActionEvent t) -> {
-            createWindowFind();
+            createSearchBoxByPhone();
             grid.setVisible(true);
         });
-        MenuItem playComp = new MenuItem("#2");
+        MenuItem playComp = new MenuItem("Поиск по параметру в разл. категориях");
         playComp.setOnAction((ActionEvent t) -> {
-            createWindowFindParams();
+            createSearchBoxByParam();
             grid.setVisible(true);
 
         });

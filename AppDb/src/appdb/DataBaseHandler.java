@@ -52,14 +52,40 @@ public class DataBaseHandler extends Conf {
 
     }
 
+    public void insertPhone(int id, String number, String type) throws ClassNotFoundException {
+        if ("Мобильный".equals(type)) {
+            type = "mobile";
+        } else if ("Домашний".equals(type)) {
+            type = "home";
+        } else if ("Рабочий".equals(type)) {
+            type = "work";
+        }
+        try {
+            String insert = "INSERT INTO " + Const.PhoneTable + "(" + Const.IdHuman + "," + Const.TypeNumber + "," + Const.Number + ")" + "VALUES( ?,?,? )";
+
+            PreparedStatement prSt = getDbConnection().prepareStatement(insert);
+            prSt.setInt(1, id);
+            prSt.setString(2, type);
+            prSt.setString(3, number);
+            prSt.executeUpdate();
+        } catch (SQLException | ClassNotFoundException ex) {
+            Logger.getLogger(DataBaseHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
     public ObservableList<Human> selectHuman(String paramFind, String paramColumn, String paramCat) throws ClassNotFoundException, SQLException {
         String setTr = "email";
-        if (paramFind == "Имя") {
-            setTr = Const.NameCol;
-        } else if (paramFind == "Фамилия") {
-            setTr = Const.SurnameCol;
-        } else if (paramFind == "Город") {
-            setTr = Const.AddressCol;
+        switch (paramFind) {
+            case "Имя":
+                setTr = Const.NameCol;
+                break;
+            case "Фамилия":
+                setTr = Const.SurnameCol;
+                break;
+            case "Город":
+                setTr = Const.AddressCol;
+                break;
         }
         String select;
         try {
@@ -69,8 +95,8 @@ public class DataBaseHandler extends Conf {
                         + " WHERE " + setTr + " = '" + paramColumn + "' AND " + Const.CategoryCol + " = '" + paramCat + "'";
             } else {
                 select = "SELECT " + Const.IdHuman + "," + Const.NameCol + "," + Const.SurnameCol + ","
-                    + Const.AddressCol + "," + Const.EmailCol + "," + Const.CategoryCol + " FROM " + Const.HumanTable
-                    + " WHERE " + setTr + " = '" + paramColumn + "'";
+                        + Const.AddressCol + "," + Const.EmailCol + "," + Const.CategoryCol + " FROM " + Const.HumanTable
+                        + " WHERE " + setTr + " = '" + paramColumn + "'";
             }
             PreparedStatement prSt = getDbConnection().prepareStatement(select);
             ResultSet resultSet = prSt.executeQuery();
@@ -118,11 +144,11 @@ public class DataBaseHandler extends Conf {
     }
 
     public ObservableList<Phone> selectPhone(int id) throws ClassNotFoundException, SQLException {
+        dataPh.clear();
         try {
             String select = "SELECT " + Const.IdHuman + "," + Const.NameCol + "," + Const.SurnameCol + ","
                     + Const.AddressCol + "," + Const.TypeNumber + "," + Const.Number + " FROM " + Const.HumanTable + " NATURAL JOIN " + Const.PhoneTable
                     + " WHERE " + Const.PhoneTable + "." + Const.IdPhoneNumber + " = " + id;
-            System.out.println(select);
             PreparedStatement prSt = getDbConnection().prepareStatement(select);
             ResultSet resultSet = prSt.executeQuery();
             while (resultSet.next()) {
@@ -132,6 +158,44 @@ public class DataBaseHandler extends Conf {
             Logger.getLogger(DataBaseHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
         return dataPh;
+    }
+
+    public boolean include(String number) {
+        dataPh.clear();
+        try {
+            String select = "SELECT " + Const.Number + " , " + Const.TypeNumber + " , " + Const.IdHuman + " FROM " + Const.PhoneTable
+                    + " WHERE " + Const.PhoneTable + "." + Const.Number + " = " + number;
+            PreparedStatement prSt = getDbConnection().prepareStatement(select);
+            ResultSet resultSet = prSt.executeQuery();
+            while (resultSet.next()) {
+                dataPh.add(new Phone(resultSet.getInt(Const.IdPhoneNumber), resultSet.getString(Const.TypeNumber), resultSet.getString(Const.Number)));
+            }
+        } catch (SQLException | ClassNotFoundException ex) {
+            Logger.getLogger(DataBaseHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return !dataPh.isEmpty();
+    }
+
+    public boolean includeHuman(String email) {
+        ObservableList<Human> datainc
+                = FXCollections.observableArrayList();
+        datainc.clear();
+        data.clear();
+        try {
+            System.out.println(email);
+            String select = "SELECT *" + " FROM " + Const.HumanTable
+                    + " WHERE " + Const.HumanTable + "." + Const.EmailCol + " = \"" + email + "\"";
+            PreparedStatement prSt = getDbConnection().prepareStatement(select);
+            ResultSet resultSet = prSt.executeQuery();
+            while (resultSet.next()) {
+                datainc.add(new Human(resultSet.getInt(Const.IdHuman), resultSet.getString(Const.NameCol), resultSet.getString(Const.SurnameCol), resultSet.getString(Const.AddressCol),
+                        resultSet.getString(Const.EmailCol), resultSet.getString(Const.CategoryCol)));
+            }
+        } catch (SQLException | ClassNotFoundException ex) {
+            Logger.getLogger(DataBaseHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return !datainc.isEmpty();
     }
 
 }
