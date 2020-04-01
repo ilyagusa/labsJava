@@ -13,7 +13,7 @@ import java.util.ArrayList;
  */
 public class FractionsList {
 
-    ArrayList<Fractions> list;
+    private ArrayList<Fractions> list;
 
     public FractionsList() {
         list = new ArrayList<>();

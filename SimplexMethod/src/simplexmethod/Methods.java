@@ -13,6 +13,10 @@ import java.math.BigInteger;
  */
 public class Methods {
 
+    public static void me() {
+        System.out.println(InputInfo.sTable);
+    }
+
     public static int gcdThing(int a, int b) {
         BigInteger b1 = BigInteger.valueOf(a);
         BigInteger b2 = BigInteger.valueOf(b);
@@ -26,19 +30,14 @@ public class Methods {
             if (str.contains("/")) {
                 strArray = str.split("/");
                 return new Fraction(Integer.parseInt(strArray[0]), Integer.parseInt(strArray[1]));
-            } else if (str.contains(".")) {
-                strArray = str.split("\\.");
-                //удаление ненужных нулей в конце десятичного числа
-                strArray[1] = strArray[1].replaceAll("0+$", "");
-                return new Fraction(Integer.parseInt(strArray[0] + strArray[1]), (int) Math.pow(10.0, strArray[1].length()));
             } else {
                 return new Fraction(Integer.parseInt(str), 1);
             }
         }
-        
+
     }
-    
-    public static boolean checkInput(){
+
+    public static boolean checkInput() {
         return true;
     }
 

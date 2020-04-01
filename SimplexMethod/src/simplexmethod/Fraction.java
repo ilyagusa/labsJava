@@ -61,7 +61,7 @@ public class Fraction  {
 
     @Override
     public String toString() {
-        return "fraction = " + this.num + "/" + this.denom;
+        return "" + this.num + "/" + this.denom;
     }
 
 }

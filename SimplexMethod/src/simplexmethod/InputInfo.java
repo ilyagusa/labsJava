@@ -21,11 +21,11 @@ import javafx.scene.control.TextField;
 public class InputInfo {
 
     static SourceTask sTable;
-    static FractionsList flEq = new FractionsList();
+    static FractionsList flEq;
 
-    public static void readFile() throws WrongNumException {
+    public static void readFile(int sizeEq, int sizeX) throws WrongNumException {  
         File in = new File("in.txt");
-        int line = 0;
+        flEq  = new FractionsList();
         try (Scanner sc = new Scanner(in)) {
             while (sc.hasNextLine()) {
                 String str = sc.nextLine();
@@ -36,11 +36,10 @@ public class InputInfo {
                     frs.add(B);
                 }
                 flEq.add(frs);
-                line++;
             }
             Fractions target = flEq.getFractions(0);
             flEq.remove(0);
-            sTable = new SourceTask(target, flEq, (line - 1), (target.size() + 1));
+            sTable = new SourceTask(target, flEq);
         } catch (FileNotFoundException ex) {
             System.out.println("Нет файла");
         } catch (WrongNumException ex) {
@@ -48,7 +47,6 @@ public class InputInfo {
         } catch (NumberFormatException ex) {
             System.out.println("Неправильный формат ввода");
         }
-        System.out.println(sTable);
     }
 
     public static void readInput(TextField[][] a, int sizeEq, int sizeX) throws IOException, WrongNumException {
@@ -65,7 +63,7 @@ public class InputInfo {
             }
         }
         writer.flush();
-        readFile();
+        readFile(sizeEq, sizeX);
     }
 
 }

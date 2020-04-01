@@ -18,6 +18,10 @@ public class Fractions {
     public Fractions() {
         data = new ArrayList<>();
     }
+    
+    public Fraction getEl(int i){
+        return data.get(i);
+    }
 
     public void add(Fraction el) {
         data.add(el);
